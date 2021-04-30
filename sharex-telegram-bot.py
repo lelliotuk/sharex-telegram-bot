@@ -7,7 +7,7 @@ API_KEY = "(SHAREX FLASK API KEY HERE)"
 
 API_FORM = {'k': API_KEY}
 
-USER_WHITELIST = (232800987,)
+USER_WHITELIST = (123456789,) # AUTHORISED USER IDS HERE
 
 from uuid import uuid4
 from datetime import datetime
