@@ -63,12 +63,12 @@ def upload(update: Update, context: CallbackContext) -> None:
     
     temp = './temp/' + rnd()
     
+    reply = update.message.reply_text("Uploading...")
+    
     file.download(temp)
     
     tempfile = open(temp,'rb')
     files = {'f': (filename, tempfile)}
-    
-    reply = update.message.reply_text("Uploading...")
     
     resp = requests.post(API_URL, files=files, data=API_FORM, verify=False)
     reply.edit_text(resp.text)
