@@ -18,7 +18,6 @@ import random
 import string
 import os
 import requests
-import systemd.daemon
 
 if not os.path.isdir("./temp"): os.mkdir("./temp")
 
@@ -90,7 +89,6 @@ def main() -> None:
     updater.dispatcher.add_handler(MessageHandler(supported_uploads, upload))
     updater.dispatcher.add_handler(MessageHandler(~supported_uploads, unsupported))
     
-    systemd.daemon.notify('READY=1')
     updater.start_polling()
     updater.idle()
 
