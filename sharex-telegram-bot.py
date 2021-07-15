@@ -9,6 +9,7 @@ API_FORM = {'k': API_KEY}
 
 USER_WHITELIST = (123456789,) # AUTHORISED USER IDS HERE
 
+
 from uuid import uuid4
 from datetime import datetime
 from telegram import InlineQueryResultArticle, ParseMode, InputTextMessageContent, Update
@@ -18,11 +19,10 @@ import random
 import string
 import os
 import requests
+import io
 
 if not os.path.isdir("./temp"): os.mkdir("./temp")
 
-
-def rnd(l=32): return ''.join(random.choices(string.ascii_letters + string.digits, k=l))
 
 def authorised(update):
     if update.effective_user.id in USER_WHITELIST: 
@@ -30,6 +30,7 @@ def authorised(update):
     else:
         update.message.reply_text("Unauthorised")
         return False
+
 
 def upload(update: Update, context: CallbackContext) -> None:
     if not authorised(update): return
@@ -60,28 +61,33 @@ def upload(update: Update, context: CallbackContext) -> None:
 
     file = context.bot.getFile(file.file_id)
     
-    temp = './temp/' + rnd()
-    
     reply = update.message.reply_text("Uploading...")
     
-    file.download(temp)
+    temp = io.BytesIO()
+    files = {'f': (filename, temp)}
+    file.download(out=temp)
+    temp.seek(0)
     
-    tempfile = open(temp,'rb')
-    files = {'f': (filename, tempfile)}
-    
-    resp = requests.post(API_URL, files=files, data=API_FORM, verify=False)
-    reply.edit_text(resp.text)
-    tempfile.close()
-    os.remove(temp)
+    try:
+        req = requests.post(API_URL, files=files, data=API_FORM, verify=False)
+        reply.edit_text(req.text)
+    except:
+        reply.edit_text("API/Connection error")
+        
+    temp.close()
 
 
 def unsupported(update: Update, context: CallbackContext) -> None:
     if not authorised(update): return
     update.message.reply_text("Unsupported type (upload a photo or something)")
 
+
 supported_uploads = Filters.document | Filters.photo | Filters.video | Filters.audio | Filters.voice | Filters.video_note
 
+
 def main() -> None:
+    requests.packages.urllib3.disable_warnings(requests.packages.urllib3.exceptions.InsecureRequestWarning)
+    
     updater = Updater(BOT_TOKEN, use_context=True)
     dispatcher = updater.dispatcher
 
