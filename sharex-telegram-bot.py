@@ -5,12 +5,11 @@ BOT_TOKEN = "(TELEGRAM BOT TOKEN HERE)"
 API_URL = "(SHAREX FLASK ENDPOINT HERE)" # eg https://localhost/share
 API_KEY = "(SHAREX FLASK API KEY HERE)"
 
-API_FORM = {'k': API_KEY}
-
 USER_WHITELIST = (123456789,) # AUTHORISED USER IDS HERE
 
+API_FORM = {'k': API_KEY}
 
-from uuid import uuid4
+
 from datetime import datetime
 from telegram import InlineQueryResultArticle, ParseMode, InputTextMessageContent, Update
 from telegram.ext import Updater, InlineQueryHandler, CommandHandler, MessageHandler, CallbackContext, Filters
