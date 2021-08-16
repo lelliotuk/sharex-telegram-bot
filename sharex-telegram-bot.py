@@ -40,15 +40,15 @@ def upload(update: Update, context: CallbackContext) -> None:
     if msg.photo: 
         file = msg.photo[-1]
         ext = "jpg"
-    if msg.audio: 
+    elif msg.audio: 
         file = msg.audio
-    if msg.video: 
+    elif msg.video: 
         file = msg.video
-    if msg.voice: 
+    elif msg.voice: 
         file = msg.voice
-    if msg.document: 
+    elif msg.document: 
         file = msg.document
-    if msg.video_note:
+    elif msg.video_note:
         file = msg.video_note
         ext = "mp4"
 
