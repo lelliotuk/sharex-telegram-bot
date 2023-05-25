@@ -5,97 +5,80 @@ BOT_TOKEN = "(TELEGRAM BOT TOKEN HERE)"
 API_URL = "(SHAREX FLASK ENDPOINT HERE)" # eg https://localhost/share
 API_KEY = "(SHAREX FLASK API KEY HERE)"
 
-USER_WHITELIST = (123456789,) # AUTHORISED USER IDS HERE
-
 API_FORM = {'k': API_KEY}
+
+USER_WHITELIST = (123456789,) # AUTHORISED USER IDS HERE
 
 
 from datetime import datetime
-from telegram import InlineQueryResultArticle, ParseMode, InputTextMessageContent, Update
-from telegram.ext import Updater, InlineQueryHandler, CommandHandler, MessageHandler, CallbackContext, Filters
-from telegram.utils.helpers import escape_markdown
-import random
-import string
-import os
+from telegram import Update
+from telegram.ext import Application, MessageHandler, CallbackContext, filters
 import requests
-import io
-
-if not os.path.isdir("./temp"): os.mkdir("./temp")
+from io import BytesIO
 
 
-def authorised(update):
+async def authorised(update):
     if update.effective_user.id in USER_WHITELIST: 
         return True
     else:
-        update.message.reply_text("Unauthorised")
+        await update.message.reply_text("Unauthorised")
         return False
 
 
-def upload(update: Update, context: CallbackContext) -> None:
+async def upload(update: Update, context: CallbackContext):
     if not authorised(update): return
     msg = update.message
     timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-    
-    ext = ""
-    if msg.photo: 
-        file = msg.photo[-1]
-        ext = "jpg"
-    elif msg.audio: 
-        file = msg.audio
-    elif msg.video: 
-        file = msg.video
-    elif msg.voice: 
-        file = msg.voice
-    elif msg.document: 
-        file = msg.document
-    elif msg.video_note:
-        file = msg.video_note
-        ext = "mp4"
 
+
+    if type(msg.effective_attachment) is tuple:
+        attachment = msg.effective_attachment[0]
+    else:
+        attachment = msg.effective_attachment
+    
+    if hasattr(attachment, "get_file"):
+        file = await attachment.get_file()
+    else:
+        reply = await update.message.reply_text("No file...")
+        return
+    
     if hasattr(file, "file_name"):
         filename = file.file_name
     else:
-        if not ext: ext = file.mime_type.split("/")[-1]
+        ext = file.file_path.rsplit(".",1)[-1]
         filename = f"telegram_{timestamp}.{ext}"
-
-    file = context.bot.getFile(file.file_id)
     
-    reply = update.message.reply_text("Uploading...")
+    reply = await update.message.reply_text("Uploading...")
     
-    temp = io.BytesIO()
+    temp = BytesIO()
     files = {'f': (filename, temp)}
-    file.download(out=temp)
+    await file.download_to_memory(out=temp)
     temp.seek(0)
     
     try:
-        req = requests.post(API_URL, files=files, data=API_FORM, verify=False)
-        reply.edit_text(req.text)
+        req = requests.post(API_URL, files=files, data=API_FORM)
+        await reply.edit_text(req.text)
     except:
-        reply.edit_text("API/Connection error")
+        await reply.edit_text("API/Connection error")
         
     temp.close()
 
 
-def unsupported(update: Update, context: CallbackContext) -> None:
+async def unsupported(update: Update, context: CallbackContext):
     if not authorised(update): return
-    update.message.reply_text("Unsupported type (upload a photo or something)")
+    await update.message.reply_text("Unsupported type (upload a photo or something)")
 
 
-supported_uploads = Filters.document | Filters.photo | Filters.video | Filters.audio | Filters.voice | Filters.video_note
+SUPPORTED_UPLOADS = filters.ATTACHMENT
 
 
-def main() -> None:
-    requests.packages.urllib3.disable_warnings(requests.packages.urllib3.exceptions.InsecureRequestWarning)
+def main(): 
+    application = Application.builder().token(BOT_TOKEN).build()
+
+    application.add_handler(MessageHandler(SUPPORTED_UPLOADS, upload))
+    application.add_handler(MessageHandler(~SUPPORTED_UPLOADS, unsupported))
     
-    updater = Updater(BOT_TOKEN, use_context=True)
-    dispatcher = updater.dispatcher
-
-
-    updater.dispatcher.add_handler(MessageHandler(supported_uploads, upload))
-    updater.dispatcher.add_handler(MessageHandler(~supported_uploads, unsupported))
-    
-    updater.start_polling()
-    updater.idle()
+    application.run_polling()
 
 
 if __name__ == '__main__':
