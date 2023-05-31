@@ -32,7 +32,7 @@ async def upload(update: Update, context: CallbackContext):
 
 
     if type(msg.effective_attachment) is tuple:
-        attachment = msg.effective_attachment[0]
+        attachment = msg.effective_attachment[-1]
     else:
         attachment = msg.effective_attachment
     
